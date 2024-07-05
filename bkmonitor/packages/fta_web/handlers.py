@@ -262,7 +262,8 @@ def migrate_actions(sender, **kwargs):
 
 
 def rollover_es_indices(sender, **kwargs):
-    rollover_indices()
+    # rollover_indices()
+    pass
 
 
 def register_global_event_plugin(sender, **kwargs):
