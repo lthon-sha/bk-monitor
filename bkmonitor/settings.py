@@ -8,6 +8,17 @@ Unless required by applicable law or agreed to in writing, software distributed 
 an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
 specific language governing permissions and limitations under the License.
 """
+import sys
+from dotenv import find_dotenv, load_dotenv
+
+if "test" in sys.argv or "pytest" in sys.modules:
+    load_dotenv(find_dotenv(".env.test"))
+    print(".env.test loaded")
+else:
+    load_dotenv()
+    print(".env loaded")
+
+
 import logging
 import os
 import sys
@@ -25,8 +36,12 @@ if "redbeat.RedBeatScheduler" in sys.argv:
     patch_target.update({"redbeat.schedulers": None})
 monkey.patch_all(patch_target)
 
-# append packages to sys.path
-sys.path.append(os.path.join(os.getcwd(), "packages"))
+# append bkmonitor & packages to sys.path
+from pathlib import Path
+monitor_path = Path(__file__).parent
+packages_path = Path(__file__).parent / "packages"
+sys.path.insert(0, str(monitor_path))
+sys.path.insert(0, str(packages_path))
 
 DJANGO_CONF_MODULE = "config.{env}".format(
     env={"development": "dev", "testing": "stag", "production": "prod"}.get(ENVIRONMENT)
@@ -60,3 +75,27 @@ if RUN_MODE == "DEVELOP":
         from local_settings import *  # noqa
     except ImportError:
         pass
+
+
+LOGGING["formatters"]["verbose"] = {
+    "format": "%(levelname)s %(asctime)s %(pathname)s %(lineno)d %(funcName)s %(process)d %(thread)d %(message)s",
+}
+LOGGING["handlers"]["console"] = {
+    "level": "DEBUG",
+    "class": "logging.StreamHandler",
+    "formatter": "verbose",
+}
+for logger in LOGGING["loggers"]:
+    LOGGING["loggers"][logger]["handlers"] = []
+    LOGGING["loggers"][logger]["propagate"] = True
+
+LOGGING["loggers"]["django.db.backends"] = {
+    "level": "DEBUG",
+    "handlers": ["console"],
+    "propagate": False,
+}
+
+LOGGING["root"] = {
+    "handlers": ["console"],
+    "level": "INFO",
+}
